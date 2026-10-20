@@ -1,0 +1,9 @@
+{
+  "usd_inr": 84.0,
+  "rules": [
+    {"id": "R1", "type": "max_trades_per_day", "limit": 5},
+    {"id": "R2", "type": "max_daily_loss_inr", "limit": 20000},
+    {"id": "R3", "type": "stop_after_consecutive_losses", "limit": 2},
+    {"id": "R4", "type": "max_lot_size", "limit": 2.0}
+  ]
+}
