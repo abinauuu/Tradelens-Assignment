@@ -45,9 +45,11 @@ def read_mt5(path, usd_inr):
     return out
 
 
+
 def read_broker(path):
     out = []
     rows = []
+
     for ws in openpyxl.load_workbook(path, data_only=True).worksheets:
         rows.extend(ws.iter_rows(values_only=True))
 
@@ -57,33 +59,53 @@ def read_broker(path):
                       for c in r if c is not None)),
         None
     )
+
     if h is None:
         raise ValueError("Could not find 'Order ID' header in " + path)
 
     head = [str(c).strip() if c is not None else "" for c in rows[h]]
+
     for r in rows[h + 1:]:
         d = dict(zip(head, r))
         oid = d.get("Order ID")
+
         if oid is None or str(oid).strip() == "" or str(oid).strip().lower() == "total":
             continue
+
         if d.get("Realized P&L") in (None, ""):
             continue
-        dt = d["Trade Date"]
+
+        dt = d.get("Trade Date")
+
         if isinstance(dt, datetime):
             pass
         elif isinstance(dt, (int, float)):
             dt = openpyxl.utils.datetime.from_excel(dt)
         else:
-            dt = datetime.strptime(str(dt).strip(), "%d-%m-%Y")
-            pnl = round(num(d["Realized P&L"]), 2) + 0.0
-            sym = clean_symbol(d["Symbol"])
-            q = num(d["Quantity"])
-            out.append({"trade_id": "in-%s" % str(oid).strip().split(".")[0], "source": "broker_in",
-                        "symbol": sym, "asset_class": asset_class(sym),
-                        "close_date": dt.strftime("%Y-%m-%d"), "close_time": "",
-                        "quantity": int(q) if q == int(q) else q, "pnl_native": pnl,
-                        "currency": "INR", "pnl_inr": pnl})
-            return out
+            try:
+                dt = datetime.strptime(str(dt).strip(), "%d-%m-%Y")
+            except (ValueError, TypeError):
+                continue
+
+        pnl = round(num(d["Realized P&L"]), 2) + 0.0
+        sym = clean_symbol(d["Symbol"])
+        q = num(d["Quantity"])
+
+        out.append({
+            "trade_id": "in-%s" % str(oid).strip().split(".")[0],
+            "source": "broker_in",
+            "symbol": sym,
+            "asset_class": asset_class(sym),
+            "close_date": dt.strftime("%Y-%m-%d"),
+            "close_time": "",
+            "quantity": int(q) if q == int(q) else q,
+            "pnl_native": pnl,
+            "currency": "INR",
+            "pnl_inr": pnl
+        })
+
+    return out
+
 
 
 def load_trades(data_dir, usd_inr):
